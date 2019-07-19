@@ -4,6 +4,7 @@ import (
 	"../../domains/miapi"
 	"../../utils/apierrors"
 	"sync"
+	"time"
 )
 
 func GetResultFromApi(userId int64) (*miapi.Result, *apierrors.ApiError) {
@@ -93,7 +94,8 @@ func GetResultGChannelFromApi(userId int64) *miapi.Result {
 	result.User, _ = createUser(userId)
 
 	c := make(chan *miapi.Result)
-	//defer c
+
+	limiter := time.Tick(7000 * time.Millisecond)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -113,9 +115,12 @@ func GetResultGChannelFromApi(userId int64) *miapi.Result {
 			} else if elem.Site != nil{
 				result.Site = elem.Site
 			}
-
 		}
+		c <- &result
+		close(c)
 	}()
+
+	<-limiter
 
 	wg.Wait()
 	return &result
